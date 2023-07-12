@@ -30,7 +30,7 @@ import struct
 import time
 from micropython import const
 from adafruit_bus_device.spi_device import SPIDevice
-from digitalio import Direction
+from digitalio import Direction, Pull
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_ESP32SPI.git"
@@ -168,6 +168,7 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
         self._gpio0 = gpio0_dio
         self._cs.direction = Direction.OUTPUT
         self._ready.direction = Direction.INPUT
+        self._ready.pull = Pull.UP
         self._reset.direction = Direction.OUTPUT
         # Keep track of open tls sockets
         self._tls_sockets = []
@@ -248,12 +249,6 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
 
         self._wait_for_ready()
         with self._spi_device as spi:
-            times = time.monotonic()
-            while (time.monotonic() - times) < 1:  # wait up to 1000ms
-                if self._ready.value:  # ok ready to send!
-                    break
-            else:
-                raise TimeoutError("ESP32 timed out on SPI select")
             spi.write(
                 self._sendbuf, start=0, end=packet_len
             )  # pylint: disable=no-member
@@ -296,17 +291,9 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
 
     def _wait_response_cmd(self, cmd, num_responses=None, *, param_len_16=False):
         """Wait for ready, then parse the response"""
-        self._wait_for_ready()
-
         responses = []
+        self._wait_for_ready()
         with self._spi_device as spi:
-            times = time.monotonic()
-            while (time.monotonic() - times) < 1:  # wait up to 1000ms
-                if self._ready.value:  # ok ready to send!
-                    break
-            else:
-                raise TimeoutError("ESP32 timed out on SPI select")
-
             self._wait_spi_char(spi, _START_CMD)
             self._check_data(spi, cmd | _REPLY_FLAG)
             if num_responses is not None:
@@ -339,6 +326,7 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
         recv_param_len_16=False,
     ):
         """Send a high level SPI command, wait and return the response"""
+        time.sleep(0.001)
         self._send_command(cmd, params, param_len_16=sent_param_len_16)
         return self._wait_response_cmd(
             cmd, reply_params, param_len_16=recv_param_len_16
