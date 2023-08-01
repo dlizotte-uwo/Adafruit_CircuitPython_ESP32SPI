@@ -109,13 +109,13 @@ class socket:
         if not 0 <= nbytes <= len(buffer):
             raise ValueError("nbytes must be 0 to len(buffer)")
 
-        last_read_time = time.monotonic()
+        last_read_time = time.monotonic_ns()
         num_to_read = len(buffer) if nbytes == 0 else nbytes
         num_read = 0
         while num_to_read > 0:
             num_avail = self._available()
             if num_avail > 0:
-                last_read_time = time.monotonic()
+                last_read_time = time.monotonic_ns()
                 bytes_read = _the_interface.socket_read(
                     self._socknum, min(num_to_read, num_avail)
                 )
@@ -126,8 +126,8 @@ class socket:
                 # We got a message, but there are no more bytes to read, so we can stop.
                 break
             # No bytes yet, or more bytes requested.
-            if self._timeout > 0 and time.monotonic() - last_read_time > self._timeout:
-                raise timeout("timed out")
+            if self._timeout_ns > 0 and time.monotonic_ns() - last_read_time > self._timeout_ns:
+                raise timeout(f"timed out after {self._timeout_ns}ns")
         return num_read
 
     def settimeout(self, value):
@@ -135,6 +135,7 @@ class socket:
         If value is 0 socket reads will block until a message is available.
         """
         self._timeout = value
+        self._timeout_ns = value*1_000_000_000
 
     def _available(self):
         """Returns how many bytes of data are available to be read (up to the MAX_PACKET length)"""
