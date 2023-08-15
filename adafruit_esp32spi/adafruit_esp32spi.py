@@ -199,7 +199,7 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
         if self._debug >= 3:
             print("Wait for ESP32 ready", end="")
         times = time.monotonic()
-        while (time.monotonic() - times) < 10:  # wait up to 10 seconds
+        while (time.monotonic() - times) < 60:  # wait up to 60 seconds
             if not self._ready.value:  # we're ready!
                 break
             if self._debug >= 3:
@@ -704,13 +704,18 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
                     self._socknum_ll[0],
                     (conn_mode,),
                 ),
+                reply_params=None #Allow any number of reply params; 0 if error
             )
         else:  # ip address, use 4 arg vesion
             resp = self._send_command_get_response(
                 _START_CLIENT_TCP_CMD,
                 (dest, port_param, self._socknum_ll[0], (conn_mode,)),
+                reply_params=None #Allow any number of reply params; 0 if error
             )
-        if resp[0][0] != 1:
+        try:
+            if resp[0][0] != 1:
+                raise ConnectionError("Could not connect to remote server")
+        except IndexError:
             raise ConnectionError("Could not connect to remote server")
         if conn_mode == ESP_SPIcontrol.TLS_MODE and socket_num not in self._tls_sockets:
             self._tls_sockets.append(socket_num)
@@ -774,6 +779,10 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
             raise ConnectionError("Failed to verify data sent")
 
     def socket_available(self, socket_num):
+        # nina-fw sets gpio0 low if no bytes are available on any socket
+        # allows for short-circuit without sending SPI command
+        if self._gpio0 and self._gpio0.value == False:
+            return 0
         """Determine how many bytes are waiting to be read on the socket"""
         self._socknum_ll[0][0] = socket_num
         resp = self._send_command_get_response(_AVAIL_DATA_TCP_CMD, self._socknum_ll)
