@@ -127,7 +127,10 @@ class socket:
                 break
             # No bytes yet, or more bytes requested.
             if self._timeout_ns > 0 and time.monotonic_ns() - last_read_time > self._timeout_ns:
-                raise timeout(f"timed out after {self._timeout_ns}ns")
+                if num_read > 0:
+                    return num_read
+                else:
+                    raise timeout(f"timed out after {self._timeout_ns}ns")
         return num_read
 
     def settimeout(self, value):
