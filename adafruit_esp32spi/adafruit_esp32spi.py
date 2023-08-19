@@ -150,7 +150,7 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
         *,
         debug=False,
         debug_show_secrets=False,
-        max_tls_sockets=1
+        max_tls_sockets=1,
     ):
         self._debug = debug
         self._debug_show_secrets = debug_show_secrets
@@ -690,7 +690,10 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
         self._socknum_ll[0][0] = socket_num
         if self._debug:
             print("*** Open socket to", dest, port, conn_mode)
-        if conn_mode == ESP_SPIcontrol.TLS_MODE and len(self._tls_sockets) >= self._max_tls_sockets:
+        if (
+            conn_mode == ESP_SPIcontrol.TLS_MODE
+            and len(self._tls_sockets) >= self._max_tls_sockets
+        ):
             raise OSError(23)  # ENFILE - File table overflow
         port_param = struct.pack(">H", port)
         if isinstance(dest, str):  # use the 5 arg version
@@ -704,13 +707,13 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
                     self._socknum_ll[0],
                     (conn_mode,),
                 ),
-                reply_params=None #Allow any number of reply params; 0 if error
+                reply_params=None,  # Allow any number of reply params; 0 if error
             )
         else:  # ip address, use 4 arg vesion
             resp = self._send_command_get_response(
                 _START_CLIENT_TCP_CMD,
                 (dest, port_param, self._socknum_ll[0], (conn_mode,)),
-                reply_params=None #Allow any number of reply params; 0 if error
+                reply_params=None,  # Allow any number of reply params; 0 if error
             )
         try:
             if resp[0][0] != 1:
