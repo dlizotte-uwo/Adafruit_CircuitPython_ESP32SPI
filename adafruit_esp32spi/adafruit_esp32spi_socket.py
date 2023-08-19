@@ -132,8 +132,7 @@ class socket:
             ):
                 if num_read > 0:
                     return num_read
-                else:
-                    raise timeout(f"timed out after {self._timeout_ns}ns")
+                raise timeout(f"timed out after {self._timeout_ns}ns")
         return num_read
 
     def settimeout(self, value):

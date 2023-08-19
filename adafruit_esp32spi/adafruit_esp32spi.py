@@ -718,8 +718,8 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
         try:
             if resp[0][0] != 1:
                 raise ConnectionError("Could not connect to remote server")
-        except IndexError:
-            raise ConnectionError("Could not connect to remote server")
+        except IndexError as exc:
+            raise ConnectionError("Could not connect to remote server") from exc
         if conn_mode == ESP_SPIcontrol.TLS_MODE and socket_num not in self._tls_sockets:
             self._tls_sockets.append(socket_num)
 
@@ -782,11 +782,11 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods, too-many-insta
             raise ConnectionError("Failed to verify data sent")
 
     def socket_available(self, socket_num):
-        # nina-fw sets gpio0 low if no bytes are available on any socket
-        # allows for short-circuit without sending SPI command
-        if self._gpio0 and self._gpio0.value == False:
-            return 0
         """Determine how many bytes are waiting to be read on the socket"""
+        if self._gpio0 and self._gpio0.value is False:
+            # nina-fw sets gpio0 low if no bytes are available on any socket
+            # allows for short-circuit without sending SPI command
+            return 0
         self._socknum_ll[0][0] = socket_num
         resp = self._send_command_get_response(_AVAIL_DATA_TCP_CMD, self._socknum_ll)
         reply = struct.unpack("<H", resp[0])[0]
