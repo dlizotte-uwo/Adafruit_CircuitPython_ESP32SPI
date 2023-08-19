@@ -126,7 +126,10 @@ class socket:
                 # We got a message, but there are no more bytes to read, so we can stop.
                 break
             # No bytes yet, or more bytes requested.
-            if self._timeout_ns > 0 and time.monotonic_ns() - last_read_time > self._timeout_ns:
+            if (
+                self._timeout_ns > 0
+                and time.monotonic_ns() - last_read_time > self._timeout_ns
+            ):
                 if num_read > 0:
                     return num_read
                 else:
@@ -138,7 +141,7 @@ class socket:
         If value is 0 socket reads will block until a message is available.
         """
         self._timeout = value
-        self._timeout_ns = value*1_000_000_000
+        self._timeout_ns = value * 1_000_000_000
 
     def _available(self):
         """Returns how many bytes of data are available to be read (up to the MAX_PACKET length)"""
